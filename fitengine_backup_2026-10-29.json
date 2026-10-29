@@ -1,0 +1,82 @@
+[
+  {
+    "id": "ex-1",
+    "name": "Sandbag Clean & Press",
+    "muscleGroup": "Tactical/Conditioning",
+    "difficulty": 8,
+    "lengthFactor": 5,
+    "notes": "Explosive full body movement"
+  },
+  {
+    "id": "ex-2",
+    "name": "Bear Hug Sandbag Carry",
+    "muscleGroup": "Core",
+    "difficulty": 7,
+    "lengthFactor": 4,
+    "notes": "Core & grip endurance"
+  },
+  {
+    "id": "ex-3",
+    "name": "Push-ups (Weighted or Regular)",
+    "muscleGroup": "Chest",
+    "difficulty": 4,
+    "lengthFactor": 3,
+    "notes": "Chest & tricep builder"
+  },
+  {
+    "id": "ex-4",
+    "name": "Bodyweight Pull-Ups",
+    "muscleGroup": "Back",
+    "difficulty": 6,
+    "lengthFactor": 4,
+    "notes": "Upper body vertical pull"
+  },
+  {
+    "id": "ex-5",
+    "name": "Sandbag Front Squats",
+    "muscleGroup": "Legs",
+    "difficulty": 7,
+    "lengthFactor": 5,
+    "notes": "Quad & core strength"
+  },
+  {
+    "id": "ex-6",
+    "name": "Dumbbell Overhead Press",
+    "muscleGroup": "Shoulders",
+    "difficulty": 5,
+    "lengthFactor": 4,
+    "notes": "Deltoid strength"
+  },
+  {
+    "id": "ex-7",
+    "name": "Hanging Leg Raises",
+    "muscleGroup": "Core",
+    "difficulty": 6,
+    "lengthFactor": 3,
+    "notes": "Lower abdominal focus"
+  },
+  {
+    "id": "ex-8",
+    "name": "Burpee Sandbag Over Shoulder",
+    "muscleGroup": "Tactical/Conditioning",
+    "difficulty": 9,
+    "lengthFactor": 6,
+    "notes": "High intensity conditioning"
+  },
+  {
+    "id": "ex-9",
+    "name": "Inverted Rows",
+    "muscleGroup": "Back",
+    "difficulty": 4,
+    "lengthFactor": 3,
+    "notes": "Horizontal upper back pull"
+  },
+  {
+    "id": "ex-10",
+    "name": "Walking Lunges",
+    "muscleGroup": "Legs",
+    "difficulty": 5,
+    "lengthFactor": 4,
+    "notes": "Unilateral leg stability"
+  }
+]
