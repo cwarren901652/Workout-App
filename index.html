@@ -76,7 +76,36 @@
             letter-spacing: -0.3px;
         }
 
-        /* iOS-Style List Selector Banner */
+        /* iOS Segmented Control Toggle */
+        .segmented-control {
+            display: flex;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .segment-btn {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .segment-btn.active {
+            background: var(--surface-color);
+            color: var(--text-main);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* List Selector Banner */
         .list-banner {
             background: linear-gradient(135deg, #1c1c1e, #2c2c2e);
             border: 1px solid var(--border);
@@ -220,7 +249,26 @@
             color: var(--accent);
         }
 
-        /* Frosted Glass Bottom Navigation Bar with Button Cards */
+        .badge-type {
+            background: rgba(255, 159, 10, 0.15);
+            color: #ff9f0a; /* iOS System Orange */
+        }
+
+        /* Modality Box Banner */
+        .modality-info-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Bottom Navigation Bar */
         .nav-bar {
             position: fixed;
             bottom: 0;
@@ -299,8 +347,15 @@
 
     <!-- VIEW 1: GENERATOR -->
     <div id="view-generator" class="view-section active">
-        <div class="card">
-            <h2>Generate Routine</h2>
+        <!-- GENERATOR MODE TOGGLE -->
+        <div class="segmented-control">
+            <button id="mode-full-btn" class="segment-btn active" onclick="setGeneratorMode('full')">Full Workout</button>
+            <button id="mode-block-btn" class="segment-btn" onclick="setGeneratorMode('block')">Workout Portion</button>
+        </div>
+
+        <!-- MODE 1: FULL WORKOUT GENERATOR -->
+        <div id="panel-full-generator" class="card">
+            <h2>Full Workout Generator</h2>
             <div class="form-group">
                 <label for="gen-muscle">Target Muscle Group</label>
                 <select id="gen-muscle">
@@ -317,361 +372,27 @@
                     <input type="number" id="gen-max-diff" value="10" min="1" max="10">
                 </div>
             </div>
-            <button onclick="generateWorkout()">Generate Workout</button>
+            <button onclick="generateWorkout()">Generate Full Workout</button>
         </div>
 
-        <div id="workout-results" style="display:none;" class="card">
-            <h2>Your Custom Routine</h2>
-            <div id="workout-list-container"></div>
-            <button class="secondary" onclick="generateWorkout()" style="margin-top:14px;">Re-Roll Routine</button>
-        </div>
-    </div>
-
-    <!-- VIEW 2: EXERCISE LIBRARY & LIST MANAGER -->
-    <div id="view-library" class="view-section">
-        <!-- List Manager Card -->
-        <div class="card">
-            <h2>Manage Lists</h2>
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="form-group" style="margin-bottom:0;">
-                    <input type="text" id="new-list-name" placeholder="e.g. BUD/S Prep">
-                </div>
-                <button onclick="addNewList()" style="width: 120px;">Add List</button>
-            </div>
-            <button class="secondary danger" onclick="deleteActiveList()" style="font-size: 0.85rem; padding: 10px;">Delete Current List</button>
-        </div>
-
-        <div class="card">
-            <h2>Add Exercise to <span id="form-current-list-label" style="color:var(--primary)">Home Gym</span></h2>
-            <form id="exercise-form" onsubmit="handleExerciseSubmit(event)">
-                <input type="hidden" id="edit-id">
-                <div class="form-group">
-                    <label for="ex-name">Exercise Name</label>
-                    <input type="text" id="ex-name" required placeholder="e.g. Sandbag Clean & Press">
-                </div>
-                <div class="row">
-                    <div class="form-group">
-                        <label for="ex-muscle">Muscle Group</label>
-                        <select id="ex-muscle" required>
-                            <option value="Full Body">Full Body</option>
-                            <option value="Upper Body">Upper Body</option>
-                            <option value="Lower Body">Lower Body</option>
-                            <option value="Core">Core</option>
-                            <option value="Cardio / Conditioning">Cardio / Conditioning</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ex-diff">Difficulty (1-10)</label>
-                        <input type="number" id="ex-diff" min="1" max="10" value="5" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="ex-length">Length Factor (Mins)</label>
-                    <input type="number" id="ex-length" min="1" max="120" value="10" required>
-                </div>
-                <button type="submit" id="submit-btn">Add Exercise</button>
-                <button type="button" id="cancel-edit-btn" class="secondary" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
-            </form>
-        </div>
-
-        <div class="card">
-            <h2>Exercise Inventory (<span id="inventory-list-name">Home Gym</span>)</h2>
+        <!-- MODE 2: MODULAR WORKOUT PORTION GENERATOR -->
+        <div id="panel-block-generator" class="card" style="display:none;">
+            <h2>Generate Workout Portion</h2>
+            
             <div class="form-group">
-                <input type="text" id="search-box" placeholder="Search exercises..." oninput="renderExercises()">
+                <label for="modality-select">Workout Structure / Modality</label>
+                <select id="modality-select" onchange="onModalityChange(this.value)">
+                    <option value="EMOM">EMOM (Every Minute On the Minute)</option>
+                    <option value="AMRAP">AMRAP (As Many Rounds As Possible)</option>
+                    <option value="STRAIGHT_SETS">Straight Sets (Reps & Sets)</option>
+                    <option value="PYRAMID">Pyramid (Ascending / Descending Reps)</option>
+                </select>
             </div>
-            <div id="exercise-list"></div>
-        </div>
-    </div>
 
-    <!-- VIEW 3: DATA BACKUP -->
-    <div id="view-backup" class="view-section">
-        <div class="card">
-            <h2>Data Sync & Backup</h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
-                Export your multi-list workout libraries to a JSON file or import a backup file to share with training partners.
-            </p>
-            <button onclick="exportData()">Export JSON Backup</button>
-            <div style="margin-top: 14px;">
-                <label for="import-file" style="display:block; margin-bottom:6px;">Import JSON Backup</label>
-                <input type="file" id="import-file" accept=".json" onchange="importData(event)">
+            <!-- Modality Classification Badge -->
+            <div class="modality-info-box">
+                <span>Classification:</span>
+                <span id="modality-badge-classification" class="badge badge-type">Time-Based</span>
             </div>
-            <button class="danger" style="margin-top: 24px;" onclick="resetData()">Reset to Default Data</button>
-        </div>
-    </div>
 
-    <!-- BOTTOM NAVIGATION -->
-    <nav class="nav-bar">
-        <button class="nav-item active" onclick="switchTab('generator', this)">Generator</button>
-        <button class="nav-item" onclick="switchTab('library', this)">Library</button>
-        <button class="nav-item" onclick="switchTab('backup', this)">Data Sync</button>
-    </nav>
-
-    <script>
-        const defaultData = {
-            lists: ["Home Gym", "Commercial Gym", "BUD/S Prep"],
-            activeList: "Home Gym",
-            exercises: [
-                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscle: "Full Body", diff: 8, length: 15 },
-                { id: "2", list: "Home Gym", name: "Heavy Sandbag Squats", muscle: "Lower Body", diff: 7, length: 12 },
-                { id: "3", list: "Commercial Gym", name: "Barbell Back Squat", muscle: "Lower Body", diff: 8, length: 15 },
-                { id: "4", list: "BUD/S Prep", name: "Ruck March / Conditioning", muscle: "Cardio / Conditioning", diff: 6, length: 45 },
-                { id: "5", list: "BUD/S Prep", name: "Core Flutter Kicks", muscle: "Core", diff: 5, length: 10 }
-            ]
-        };
-
-        let appData = JSON.parse(localStorage.getItem('workout_app_multilist_data')) || defaultData;
-
-        function saveData() {
-            localStorage.setItem('workout_app_multilist_data', JSON.stringify(appData));
-            refreshUI();
-        }
-
-        function refreshUI() {
-            updateListSelectors();
-            updateExerciseCount();
-            updateMuscleFilterDropdown();
-            renderExercises();
-        }
-
-        function updateListSelectors() {
-            const globalSelector = document.getElementById('global-list-selector');
-            globalSelector.innerHTML = appData.lists.map(l => `<option value="${l}" ${l === appData.activeList ? 'selected' : ''}>${l}</option>`).join('');
-            
-            document.getElementById('active-list-display').innerText = appData.activeList;
-            document.getElementById('form-current-list-label').innerText = appData.activeList;
-            document.getElementById('inventory-list-name').innerText = appData.activeList;
-        }
-
-        function switchActiveList(listName) {
-            appData.activeList = listName;
-            saveData();
-        }
-
-        function addNewList() {
-            const input = document.getElementById('new-list-name');
-            const newName = input.value.trim();
-            if (!newName) return;
-
-            if (appData.lists.includes(newName)) {
-                alert("A list with this name already exists.");
-                return;
-            }
-
-            appData.lists.push(newName);
-            appData.activeList = newName;
-            input.value = '';
-            saveData();
-        }
-
-        function deleteActiveList() {
-            if (appData.lists.length <= 1) {
-                alert("You must keep at least one active list.");
-                return;
-            }
-
-            if (confirm(`Are you sure you want to delete the list "${appData.activeList}" and all its exercises?`)) {
-                appData.exercises = appData.exercises.filter(ex => ex.list !== appData.activeList);
-                appData.lists = appData.lists.filter(l => l !== appData.activeList);
-                appData.activeList = appData.lists[0];
-                saveData();
-            }
-        }
-
-        function updateExerciseCount() {
-            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
-            document.getElementById('exercise-count').innerText = `${currentListExercises.length} Exercises`;
-        }
-
-        function updateMuscleFilterDropdown() {
-            const select = document.getElementById('gen-muscle');
-            const currentVal = select.value;
-            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
-            const muscles = ["All", ...new Set(currentListExercises.map(e => e.muscle))];
-            
-            select.innerHTML = muscles.map(m => `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`).join('');
-        }
-
-        function switchTab(tabName, btn) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`view-${tabName}`).classList.add('active');
-            btn.classList.add('active');
-            window.scrollTo(0, 0);
-        }
-
-        function handleExerciseSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value;
-            const name = document.getElementById('ex-name').value.trim();
-            const muscle = document.getElementById('ex-muscle').value;
-            const diff = parseInt(document.getElementById('ex-diff').value);
-            const length = parseInt(document.getElementById('ex-length').value);
-
-            if (id) {
-                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscle, diff, length } : ex);
-            } else {
-                const newEx = {
-                    id: Date.now().toString(),
-                    list: appData.activeList,
-                    name,
-                    muscle,
-                    diff,
-                    length
-                };
-                appData.exercises.push(newEx);
-            }
-
-            saveData();
-            resetForm();
-        }
-
-        function renderExercises() {
-            const query = document.getElementById('search-box').value.toLowerCase();
-            const listContainer = document.getElementById('exercise-list');
-            
-            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
-            const filtered = currentListExercises.filter(ex => ex.name.toLowerCase().includes(query) || ex.muscle.toLowerCase().includes(query));
-
-            if (filtered.length === 0) {
-                listContainer.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:16px;">No exercises found in this list.</p>`;
-                return;
-            }
-
-            listContainer.innerHTML = filtered.map(ex => `
-                <div class="exercise-item">
-                    <div class="exercise-info">
-                        <h3>${ex.name}</h3>
-                        <div class="exercise-meta">
-                            <span class="badge">${ex.muscle}</span>
-                            <span class="badge badge-diff">Diff: ${ex.diff}/10</span>
-                            <span>⏱️ ${ex.length}m</span>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        <button onclick="editExercise('${ex.id}')" style="padding:6px 10px; font-size:0.8rem; width:auto;">Edit</button>
-                        <button onclick="deleteExercise('${ex.id}')" class="danger" style="padding:6px 10px; font-size:0.8rem; width:auto;">Del</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function editExercise(id) {
-            const ex = appData.exercises.find(item => item.id === id);
-            if (!ex) return;
-
-            document.getElementById('edit-id').value = ex.id;
-            document.getElementById('ex-name').value = ex.name;
-            document.getElementById('ex-muscle').value = ex.muscle;
-            document.getElementById('ex-diff').value = ex.diff;
-            document.getElementById('ex-length').value = ex.length;
-            
-            document.getElementById('submit-btn').innerText = "Update Exercise";
-            document.getElementById('cancel-edit-btn').style.display = "block";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function cancelEdit() {
-            resetForm();
-        }
-
-        function resetForm() {
-            document.getElementById('exercise-form').reset();
-            document.getElementById('edit-id').value = '';
-            document.getElementById('submit-btn').innerText = "Add Exercise";
-            document.getElementById('cancel-edit-btn').style.display = "none";
-        }
-
-        function deleteExercise(id) {
-            if (confirm("Are you sure you want to delete this exercise?")) {
-                appData.exercises = appData.exercises.filter(ex => ex.id !== id);
-                saveData();
-            }
-        }
-
-        function generateWorkout() {
-            const targetMuscle = document.getElementById('gen-muscle').value;
-            const maxTime = parseInt(document.getElementById('gen-max-time').value) || 45;
-            const maxDiff = parseInt(document.getElementById('gen-max-diff').value) || 10;
-
-            let pool = appData.exercises.filter(ex => ex.list === appData.activeList && ex.diff <= maxDiff);
-            if (targetMuscle !== "All") {
-                pool = pool.filter(ex => ex.muscle === targetMuscle);
-            }
-
-            if (pool.length === 0) {
-                alert("No exercises match your current filters in this list!");
-                return;
-            }
-
-            pool.sort(() => Math.random() - 0.5);
-
-            let selected = [];
-            let totalTime = 0;
-
-            for (let ex of pool) {
-                if (totalTime + ex.length <= maxTime || selected.length === 0) {
-                    selected.push(ex);
-                    totalTime += ex.length;
-                }
-                if (totalTime >= maxTime) break;
-            }
-
-            const resultsContainer = document.getElementById('workout-results');
-            const listContainer = document.getElementById('workout-list-container');
-            
-            resultsContainer.style.display = 'block';
-            listContainer.innerHTML = selected.map((ex, index) => `
-                <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
-                    <strong>${index + 1}. ${ex.name}</strong>
-                    <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
-                        ${ex.muscle} • Difficulty: ${ex.diff}/10 • Duration: ${ex.length} mins
-                    </div>
-                </div>
-            `).join('') + `<div style="margin-top:12px; font-weight:600; text-align:right;">Total Estimated Time: ${totalTime} mins</div>`;
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "workout_multilist_backup.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported && Array.isArray(imported.lists) && Array.isArray(imported.exercises)) {
-                        appData = imported;
-                        saveData();
-                        alert("Successfully imported multi-list libraries!");
-                    } else {
-                        alert("Invalid backup file format for multi-list structure.");
-                    }
-                } catch (err) {
-                    alert("Error parsing JSON file.");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function resetData() {
-            if (confirm("Reset data to default lists and exercises?")) {
-                appData = JSON.parse(JSON.stringify(defaultData));
-                saveData();
-                alert("Data reset to defaults.");
-            }
-        }
-
-        refreshUI();
-    </script>
-</body>
-</html>
+            <div class
