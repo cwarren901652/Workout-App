@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Workout Generator</title>
     <!-- iOS PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,34 +11,39 @@
     
     <style>
         :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --surface-card: #282828;
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --accent: #10b981;
-            --danger: #ef4444;
-            --border: #374151;
-            --radius: 12px;
+            --bg-color: #000000;
+            --surface-color: #1c1c1e;
+            --surface-card: #2c2c2e;
+            --primary: #0a84ff; /* iOS System Blue */
+            --primary-hover: #0062d2;
+            --text-main: #ffffff;
+            --text-muted: #8e8e93; /* iOS System Gray */
+            --accent: #30d158; /* iOS System Green */
+            --danger: #ff453a; /* iOS System Red */
+            --border: #38383a;
+            --radius: 14px;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             padding: 16px;
-            padding-bottom: 90px;
+            padding-top: calc(16px + env(safe-area-inset-top));
+            padding-bottom: calc(110px + env(safe-area-inset-bottom));
             max-width: 600px;
             margin: 0 auto;
+            overflow-x: hidden;
+            overscroll-behavior-y: none;
         }
 
         header {
@@ -46,11 +51,10 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
-            padding-top: env(safe-area-inset-top);
         }
 
         h1 {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
@@ -60,60 +64,71 @@
             border-radius: var(--radius);
             padding: 16px;
             margin-bottom: 16px;
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         h2 {
             font-size: 1.1rem;
+            font-weight: 600;
             margin-bottom: 12px;
             color: var(--text-main);
+            letter-spacing: -0.3px;
         }
 
-        /* List Selector Banner */
+        /* iOS-Style List Selector Banner */
         .list-banner {
-            background: linear-gradient(135deg, #1e3a8a, #1e293b);
-            border: 1px solid #3b82f6;
+            background: linear-gradient(135deg, #1c1c1e, #2c2c2e);
+            border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 12px 16px;
+            padding: 14px 16px;
             margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .list-banner select {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid var(--primary);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 6px 10px;
-            border-radius: 6px;
+            padding: 8px 12px;
+            border-radius: 8px;
             font-weight: 600;
+            font-size: 0.9rem;
+            outline: none;
         }
 
         /* Form Controls */
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         label {
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+            font-weight: 500;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         input, select, textarea {
             width: 100%;
-            padding: 10px 12px;
+            padding: 12px;
             background-color: var(--surface-color);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             color: var(--text-main);
             font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            user-select: text;
         }
 
         input:focus, select:focus, textarea:focus {
-            outline: none;
             border-color: var(--primary);
         }
 
@@ -128,49 +143,60 @@
 
         button {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             background-color: var(--primary);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: transform 0.1s ease, background-color 0.2s;
         }
 
         button:active {
+            transform: scale(0.97);
             background-color: var(--primary-hover);
         }
 
         button.secondary {
-            background-color: transparent;
+            background-color: rgba(255, 255, 255, 0.08);
             border: 1px solid var(--border);
             color: var(--text-main);
             margin-top: 8px;
         }
 
-        button.danger {
-            background-color: rgba(239, 68, 68, 0.2);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.4);
+        button.secondary:active {
+            background-color: rgba(255, 255, 255, 0.15);
         }
 
-        /* Exercise List */
+        button.danger {
+            background-color: rgba(255, 69, 58, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(255, 69, 58, 0.3);
+        }
+
+        button.danger:active {
+            background-color: rgba(255, 69, 58, 0.3);
+        }
+
+        /* Exercise List Items */
         .exercise-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
+            padding: 14px;
             background: var(--surface-color);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: 10px;
+            margin-bottom: 10px;
             border: 1px solid var(--border);
+            transition: background-color 0.2s;
         }
 
         .exercise-info h3 {
             font-size: 1rem;
-            margin-bottom: 2px;
+            font-weight: 600;
+            margin-bottom: 4px;
         }
 
         .exercise-meta {
@@ -180,32 +206,34 @@
 
         .badge {
             display: inline-block;
-            padding: 2px 8px;
-            background: rgba(59, 130, 246, 0.2);
+            padding: 3px 8px;
+            background: rgba(10, 132, 255, 0.15);
             color: var(--primary);
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
             margin-right: 4px;
         }
 
         .badge-diff {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(48, 209, 88, 0.15);
             color: var(--accent);
         }
 
-        /* Navigation Tabs */
+        /* Frosted Glass iOS Bottom Navigation Bar */
         .nav-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: var(--surface-color);
-            border-top: 1px solid var(--border);
+            background: rgba(28, 28, 30, 0.82);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             justify-content: space-around;
-            padding: 12px 0;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            padding: 10px 0;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
             z-index: 1000;
         }
 
@@ -213,7 +241,7 @@
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 500;
             cursor: pointer;
             display: flex;
@@ -221,11 +249,17 @@
             align-items: center;
             gap: 4px;
             width: auto;
-            padding: 0 16px;
+            padding: 4px 16px;
+            transition: color 0.2s, transform 0.1s;
+        }
+
+        .nav-item:active {
+            transform: scale(0.9);
         }
 
         .nav-item.active {
             color: var(--primary);
+            font-weight: 600;
         }
 
         .view-section {
@@ -234,21 +268,27 @@
 
         .view-section.active {
             display: block;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Workout Generator</h1>
+        <h1>WorkoutGen</h1>
         <span id="exercise-count" class="badge">0 Exercises</span>
     </header>
 
     <!-- ACTIVE LIST SELECTOR BANNER -->
     <div class="list-banner">
         <div>
-            <label style="margin:0; font-size:0.75rem; color:#93c5fd;">Active Library List</label>
-            <div id="active-list-display" style="font-weight: 700; font-size: 1.05rem;">Home Gym</div>
+            <label style="margin:0; font-size:0.7rem; color:var(--text-muted);">Active Library</label>
+            <div id="active-list-display" style="font-weight: 700; font-size: 1.05rem; letter-spacing: -0.3px;">Home Gym</div>
         </div>
         <select id="global-list-selector" onchange="switchActiveList(this.value)">
             <!-- Populated via JS -->
@@ -258,7 +298,7 @@
     <!-- VIEW 1: GENERATOR -->
     <div id="view-generator" class="view-section active">
         <div class="card">
-            <h2>Generate Workout</h2>
+            <h2>Generate Routine</h2>
             <div class="form-group">
                 <label for="gen-muscle">Target Muscle Group</label>
                 <select id="gen-muscle">
@@ -275,13 +315,13 @@
                     <input type="number" id="gen-max-diff" value="10" min="1" max="10">
                 </div>
             </div>
-            <button onclick="generateWorkout()">Generate Routine</button>
+            <button onclick="generateWorkout()">Generate Workout</button>
         </div>
 
         <div id="workout-results" style="display:none;" class="card">
             <h2>Your Custom Routine</h2>
             <div id="workout-list-container"></div>
-            <button class="secondary" onclick="generateWorkout()">Re-Roll Routine</button>
+            <button class="secondary" onclick="generateWorkout()" style="margin-top:14px;">Re-Roll Routine</button>
         </div>
     </div>
 
@@ -290,13 +330,13 @@
         <!-- List Manager Card -->
         <div class="card">
             <h2>Manage Lists</h2>
-            <div class="row" style="margin-bottom: 8px;">
+            <div class="row" style="margin-bottom: 10px;">
                 <div class="form-group" style="margin-bottom:0;">
-                    <input type="text" id="new-list-name" placeholder="New list name (e.g. BUD/S Prep)">
+                    <input type="text" id="new-list-name" placeholder="e.g. BUD/S Prep">
                 </div>
-                <button onclick="addNewList()" style="width: 130px;">Add List</button>
+                <button onclick="addNewList()" style="width: 120px;">Add List</button>
             </div>
-            <button class="secondary danger" onclick="deleteActiveList()" style="font-size: 0.85rem; padding: 8px;">Delete Current Active List</button>
+            <button class="secondary danger" onclick="deleteActiveList()" style="font-size: 0.85rem; padding: 10px;">Delete Current List</button>
         </div>
 
         <div class="card">
@@ -335,7 +375,7 @@
         <div class="card">
             <h2>Exercise Inventory (<span id="inventory-list-name">Home Gym</span>)</h2>
             <div class="form-group">
-                <input type="text" id="search-box" placeholder="Search exercises in this list..." oninput="renderExercises()">
+                <input type="text" id="search-box" placeholder="Search exercises..." oninput="renderExercises()">
             </div>
             <div id="exercise-list"></div>
         </div>
@@ -345,12 +385,12 @@
     <div id="view-backup" class="view-section">
         <div class="card">
             <h2>Data Sync & Backup</h2>
-            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-                Export your multi-list workout libraries to a JSON file or import a backup file to sync with friends.
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
+                Export your multi-list workout libraries to a JSON file or import a backup file to share with training partners.
             </p>
             <button onclick="exportData()">Export JSON Backup</button>
-            <div style="margin-top: 12px;">
-                <label for="import-file" style="display:block; margin-bottom:4px;">Import JSON Backup</label>
+            <div style="margin-top: 14px;">
+                <label for="import-file" style="display:block; margin-bottom:6px;">Import JSON Backup</label>
                 <input type="file" id="import-file" accept=".json" onchange="importData(event)">
             </div>
             <button class="danger" style="margin-top: 24px;" onclick="resetData()">Reset to Default Data</button>
@@ -371,7 +411,6 @@
     </nav>
 
     <script>
-        // Default Multi-List Initial State
         const defaultData = {
             lists: ["Home Gym", "Commercial Gym", "BUD/S Prep"],
             activeList: "Home Gym",
@@ -456,7 +495,6 @@
             select.innerHTML = muscles.map(m => `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`).join('');
         }
 
-        // Tab Switching
         function switchTab(tabName, btn) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -466,7 +504,6 @@
             window.scrollTo(0, 0);
         }
 
-        // Exercise CRUD Operations
         function handleExerciseSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
@@ -515,9 +552,9 @@
                             <span>⏱️ ${ex.length}m</span>
                         </div>
                     </div>
-                    <div>
-                        <button onclick="editExercise('${ex.id}')" style="padding:6px 10px; font-size:0.8rem; margin-right:4px;">Edit</button>
-                        <button onclick="deleteExercise('${ex.id}')" class="danger" style="padding:6px 10px; font-size:0.8rem;">Del</button>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="editExercise('${ex.id}')" style="padding:6px 10px; font-size:0.8rem; width:auto;">Edit</button>
+                        <button onclick="deleteExercise('${ex.id}')" class="danger" style="padding:6px 10px; font-size:0.8rem; width:auto;">Del</button>
                     </div>
                 </div>
             `).join('');
@@ -535,7 +572,7 @@
             
             document.getElementById('submit-btn').innerText = "Update Exercise";
             document.getElementById('cancel-edit-btn').style.display = "block";
-            window.scrollTo(0, 0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() {
@@ -556,7 +593,6 @@
             }
         }
 
-        // Workout Generation Algorithm
         function generateWorkout() {
             const targetMuscle = document.getElementById('gen-muscle').value;
             const maxTime = parseInt(document.getElementById('gen-max-time').value) || 45;
@@ -599,7 +635,6 @@
             `).join('') + `<div style="margin-top:12px; font-weight:600; text-align:right;">Total Estimated Time: ${totalTime} mins</div>`;
         }
 
-        // Data Sync & Backup Functions
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
             const downloadAnchor = document.createElement('a');
@@ -640,7 +675,6 @@
             }
         }
 
-        // Initialize App on Load
         refreshUI();
     </script>
 </body>
