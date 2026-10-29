@@ -36,7 +36,7 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             padding: 16px;
-            padding-bottom: 90px; /* Space for bottom nav */
+            padding-bottom: 90px;
             max-width: 600px;
             margin: 0 auto;
         }
@@ -45,12 +45,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             padding-top: env(safe-area-inset-top);
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
@@ -67,6 +67,27 @@
             font-size: 1.1rem;
             margin-bottom: 12px;
             color: var(--text-main);
+        }
+
+        /* List Selector Banner */
+        .list-banner {
+            background: linear-gradient(135deg, #1e3a8a, #1e293b);
+            border: 1px solid #3b82f6;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-banner select {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--primary);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: 600;
         }
 
         /* Form Controls */
@@ -214,14 +235,6 @@
         .view-section.active {
             display: block;
         }
-
-        .workout-output {
-            background: var(--surface-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 12px;
-            border: 1px solid var(--border);
-        }
     </style>
 </head>
 <body>
@@ -230,6 +243,17 @@
         <h1>Workout Generator</h1>
         <span id="exercise-count" class="badge">0 Exercises</span>
     </header>
+
+    <!-- ACTIVE LIST SELECTOR BANNER -->
+    <div class="list-banner">
+        <div>
+            <label style="margin:0; font-size:0.75rem; color:#93c5fd;">Active Library List</label>
+            <div id="active-list-display" style="font-weight: 700; font-size: 1.05rem;">Home Gym</div>
+        </div>
+        <select id="global-list-selector" onchange="switchActiveList(this.value)">
+            <!-- Populated via JS -->
+        </select>
+    </div>
 
     <!-- VIEW 1: GENERATOR -->
     <div id="view-generator" class="view-section active">
@@ -261,10 +285,22 @@
         </div>
     </div>
 
-    <!-- VIEW 2: EXERCISE LIBRARY -->
+    <!-- VIEW 2: EXERCISE LIBRARY & LIST MANAGER -->
     <div id="view-library" class="view-section">
+        <!-- List Manager Card -->
         <div class="card">
-            <h2>Add New Exercise</h2>
+            <h2>Manage Lists</h2>
+            <div class="row" style="margin-bottom: 8px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <input type="text" id="new-list-name" placeholder="New list name (e.g. BUD/S Prep)">
+                </div>
+                <button onclick="addNewList()" style="width: 130px;">Add List</button>
+            </div>
+            <button class="secondary danger" onclick="deleteActiveList()" style="font-size: 0.85rem; padding: 8px;">Delete Current Active List</button>
+        </div>
+
+        <div class="card">
+            <h2>Add Exercise to <span id="form-current-list-label" style="color:var(--primary)">Home Gym</span></h2>
             <form id="exercise-form" onsubmit="handleExerciseSubmit(event)">
                 <input type="hidden" id="edit-id">
                 <div class="form-group">
@@ -297,9 +333,9 @@
         </div>
 
         <div class="card">
-            <h2>Exercise Inventory</h2>
+            <h2>Exercise Inventory (<span id="inventory-list-name">Home Gym</span>)</h2>
             <div class="form-group">
-                <input type="text" id="search-box" placeholder="Search exercises..." oninput="renderExercises()">
+                <input type="text" id="search-box" placeholder="Search exercises in this list..." oninput="renderExercises()">
             </div>
             <div id="exercise-list"></div>
         </div>
@@ -310,14 +346,14 @@
         <div class="card">
             <h2>Data Sync & Backup</h2>
             <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-                Export your exercise library to a JSON file or import a previous backup file so your custom base is fully portable.
+                Export your multi-list workout libraries to a JSON file or import a backup file to sync with friends.
             </p>
             <button onclick="exportData()">Export JSON Backup</button>
             <div style="margin-top: 12px;">
                 <label for="import-file" style="display:block; margin-bottom:4px;">Import JSON Backup</label>
                 <input type="file" id="import-file" accept=".json" onchange="importData(event)">
             </div>
-            <button class="danger" style="margin-top: 24px;" onclick="resetData()">Reset to Default Library</button>
+            <button class="danger" style="margin-top: 24px;" onclick="resetData()">Reset to Default Data</button>
         </div>
     </div>
 
@@ -335,31 +371,87 @@
     </nav>
 
     <script>
-        // Initial Default Exercise Dataset
-        const defaultExercises = [
-            { id: "1", name: "Sandbag Clean & Press", muscle: "Full Body", diff: 8, length: 15 },
-            { id: "2", name: "Heavy Sandbag Squats", muscle: "Lower Body", diff: 7, length: 12 },
-            { id: "3", name: "Ruck March / Conditioning", muscle: "Cardio / Conditioning", diff: 6, length: 45 },
-            { id: "4", name: "Pull-ups", muscle: "Upper Body", diff: 7, length: 8 },
-            { id: "5", name: "Core Flutter Kicks", muscle: "Core", diff: 5, length: 10 }
-        ];
+        // Default Multi-List Initial State
+        const defaultData = {
+            lists: ["Home Gym", "Commercial Gym", "BUD/S Prep"],
+            activeList: "Home Gym",
+            exercises: [
+                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscle: "Full Body", diff: 8, length: 15 },
+                { id: "2", list: "Home Gym", name: "Heavy Sandbag Squats", muscle: "Lower Body", diff: 7, length: 12 },
+                { id: "3", list: "Commercial Gym", name: "Barbell Back Squat", muscle: "Lower Body", diff: 8, length: 15 },
+                { id: "4", list: "BUD/S Prep", name: "Ruck March / Conditioning", muscle: "Cardio / Conditioning", diff: 6, length: 45 },
+                { id: "5", list: "BUD/S Prep", name: "Core Flutter Kicks", muscle: "Core", diff: 5, length: 10 }
+            ]
+        };
 
-        let exercises = JSON.parse(localStorage.getItem('workout_exercises')) || defaultExercises;
+        let appData = JSON.parse(localStorage.getItem('workout_app_multilist_data')) || defaultData;
 
-        function saveExercises() {
-            localStorage.setItem('workout_exercises', JSON.stringify(exercises));
+        function saveData() {
+            localStorage.setItem('workout_app_multilist_data', JSON.stringify(appData));
+            refreshUI();
+        }
+
+        function refreshUI() {
+            updateListSelectors();
             updateExerciseCount();
             updateMuscleFilterDropdown();
+            renderExercises();
+        }
+
+        function updateListSelectors() {
+            const globalSelector = document.getElementById('global-list-selector');
+            globalSelector.innerHTML = appData.lists.map(l => `<option value="${l}" ${l === appData.activeList ? 'selected' : ''}>${l}</option>`).join('');
+            
+            document.getElementById('active-list-display').innerText = appData.activeList;
+            document.getElementById('form-current-list-label').innerText = appData.activeList;
+            document.getElementById('inventory-list-name').innerText = appData.activeList;
+        }
+
+        function switchActiveList(listName) {
+            appData.activeList = listName;
+            saveData();
+        }
+
+        function addNewList() {
+            const input = document.getElementById('new-list-name');
+            const newName = input.value.trim();
+            if (!newName) return;
+
+            if (appData.lists.includes(newName)) {
+                alert("A list with this name already exists.");
+                return;
+            }
+
+            appData.lists.push(newName);
+            appData.activeList = newName;
+            input.value = '';
+            saveData();
+        }
+
+        function deleteActiveList() {
+            if (appData.lists.length <= 1) {
+                alert("You must keep at least one active list.");
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete the list "${appData.activeList}" and all its exercises?`)) {
+                appData.exercises = appData.exercises.filter(ex => ex.list !== appData.activeList);
+                appData.lists = appData.lists.filter(l => l !== appData.activeList);
+                appData.activeList = appData.lists[0];
+                saveData();
+            }
         }
 
         function updateExerciseCount() {
-            document.getElementById('exercise-count').innerText = `${exercises.length} Exercises`;
+            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
+            document.getElementById('exercise-count').innerText = `${currentListExercises.length} Exercises`;
         }
 
         function updateMuscleFilterDropdown() {
             const select = document.getElementById('gen-muscle');
             const currentVal = select.value;
-            const muscles = ["All", ...new Set(exercises.map(e => e.muscle))];
+            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
+            const muscles = ["All", ...new Set(currentListExercises.map(e => e.muscle))];
             
             select.innerHTML = muscles.map(m => `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`).join('');
         }
@@ -384,33 +476,32 @@
             const length = parseInt(document.getElementById('ex-length').value);
 
             if (id) {
-                // Edit existing
-                exercises = exercises.map(ex => ex.id === id ? { id, name, muscle, diff, length } : ex);
+                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscle, diff, length } : ex);
             } else {
-                // Add new
                 const newEx = {
                     id: Date.now().toString(),
+                    list: appData.activeList,
                     name,
                     muscle,
                     diff,
                     length
                 };
-                exercises.push(newEx);
+                appData.exercises.push(newEx);
             }
 
-            saveExercises();
+            saveData();
             resetForm();
-            renderExercises();
         }
 
         function renderExercises() {
             const query = document.getElementById('search-box').value.toLowerCase();
             const listContainer = document.getElementById('exercise-list');
             
-            const filtered = exercises.filter(ex => ex.name.toLowerCase().includes(query) || ex.muscle.toLowerCase().includes(query));
+            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
+            const filtered = currentListExercises.filter(ex => ex.name.toLowerCase().includes(query) || ex.muscle.toLowerCase().includes(query));
 
             if (filtered.length === 0) {
-                listContainer.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:16px;">No exercises found.</p>`;
+                listContainer.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:16px;">No exercises found in this list.</p>`;
                 return;
             }
 
@@ -433,7 +524,7 @@
         }
 
         function editExercise(id) {
-            const ex = exercises.find(item => item.id === id);
+            const ex = appData.exercises.find(item => item.id === id);
             if (!ex) return;
 
             document.getElementById('edit-id').value = ex.id;
@@ -444,9 +535,7 @@
             
             document.getElementById('submit-btn').innerText = "Update Exercise";
             document.getElementById('cancel-edit-btn').style.display = "block";
-            
-            // Switch to library tab if not there
-            switchTab('library', document.querySelectorAll('.nav-item')[1]);
+            window.scrollTo(0, 0);
         }
 
         function cancelEdit() {
@@ -462,9 +551,8 @@
 
         function deleteExercise(id) {
             if (confirm("Are you sure you want to delete this exercise?")) {
-                exercises = exercises.filter(ex => ex.id !== id);
-                saveExercises();
-                renderExercises();
+                appData.exercises = appData.exercises.filter(ex => ex.id !== id);
+                saveData();
             }
         }
 
@@ -474,17 +562,16 @@
             const maxTime = parseInt(document.getElementById('gen-max-time').value) || 45;
             const maxDiff = parseInt(document.getElementById('gen-max-diff').value) || 10;
 
-            let pool = exercises.filter(ex => ex.diff <= maxDiff);
+            let pool = appData.exercises.filter(ex => ex.list === appData.activeList && ex.diff <= maxDiff);
             if (targetMuscle !== "All") {
                 pool = pool.filter(ex => ex.muscle === targetMuscle);
             }
 
             if (pool.length === 0) {
-                alert("No exercises match your current filters! Adjust time or difficulty parameters.");
+                alert("No exercises match your current filters in this list!");
                 return;
             }
 
-            // Shuffle pool
             pool.sort(() => Math.random() - 0.5);
 
             let selected = [];
@@ -514,10 +601,10 @@
 
         // Data Sync & Backup Functions
         function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exercises, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "workout_app_backup.json");
+            downloadAnchor.setAttribute("download", "workout_multilist_backup.json");
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
@@ -531,13 +618,12 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    if (Array.isArray(imported)) {
-                        exercises = imported;
-                        saveExercises();
-                        renderExercises();
-                        alert("Successfully imported exercise library!");
+                    if (imported && Array.isArray(imported.lists) && Array.isArray(imported.exercises)) {
+                        appData = imported;
+                        saveData();
+                        alert("Successfully imported multi-list libraries!");
                     } else {
-                        alert("Invalid backup file format.");
+                        alert("Invalid backup file format for multi-list structure.");
                     }
                 } catch (err) {
                     alert("Error parsing JSON file.");
@@ -547,18 +633,15 @@
         }
 
         function resetData() {
-            if (confirm("Reset library to default exercises? Any custom changes will be lost unless backed up.")) {
-                exercises = [...defaultExercises];
-                saveExercises();
-                renderExercises();
-                alert("Library reset to defaults.");
+            if (confirm("Reset data to default lists and exercises?")) {
+                appData = JSON.parse(JSON.stringify(defaultData));
+                saveData();
+                alert("Data reset to defaults.");
             }
         }
 
         // Initialize App on Load
-        updateExerciseCount();
-        updateMuscleFilterDropdown();
-        renderExercises();
+        refreshUI();
     </script>
 </body>
 </html>
