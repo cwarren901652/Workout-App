@@ -170,6 +170,35 @@
             flex: 1;
         }
 
+        /* Checkbox Grid for Multi-Muscle Selection */
+        .checkbox-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .checkbox-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            cursor: pointer;
+            text-transform: none;
+            user-select: none;
+        }
+
+        .checkbox-pill input {
+            width: auto;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
         button {
             width: 100%;
             padding: 14px;
@@ -231,6 +260,10 @@
         .exercise-meta {
             font-size: 0.8rem;
             color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
         }
 
         .badge {
@@ -241,7 +274,6 @@
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
-            margin-right: 4px;
         }
 
         .badge-diff {
@@ -455,25 +487,28 @@
                     <label for="ex-name">Exercise Name</label>
                     <input type="text" id="ex-name" required placeholder="e.g. Sandbag Clean & Press">
                 </div>
-                <div class="row">
-                    <div class="form-group">
-                        <label for="ex-muscle">Muscle Group</label>
-                        <select id="ex-muscle" required>
-                            <option value="Full Body">Full Body</option>
-                            <option value="Upper Body">Upper Body</option>
-                            <option value="Lower Body">Lower Body</option>
-                            <option value="Core">Core</option>
-                            <option value="Cardio / Conditioning">Cardio / Conditioning</option>
-                        </select>
+                
+                <!-- MULTI-SELECT MUSCLE GROUP CHECKBOXES -->
+                <div class="form-group">
+                    <label>Muscle Groups (Select all that apply)</label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-pill"><input type="checkbox" name="ex-muscle-cb" value="Full Body"> Full Body</label>
+                        <label class="checkbox-pill"><input type="checkbox" name="ex-muscle-cb" value="Upper Body"> Upper Body</label>
+                        <label class="checkbox-pill"><input type="checkbox" name="ex-muscle-cb" value="Lower Body"> Lower Body</label>
+                        <label class="checkbox-pill"><input type="checkbox" name="ex-muscle-cb" value="Core"> Core</label>
+                        <label class="checkbox-pill"><input type="checkbox" name="ex-muscle-cb" value="Cardio / Conditioning"> Cardio / Conditioning</label>
                     </div>
+                </div>
+
+                <div class="row">
                     <div class="form-group">
                         <label for="ex-diff">Difficulty (1-10)</label>
                         <input type="number" id="ex-diff" min="1" max="10" value="5" required>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="ex-length">Length Factor (Mins)</label>
-                    <input type="number" id="ex-length" min="1" max="120" value="10" required>
+                    <div class="form-group">
+                        <label for="ex-length">Length Factor (Mins)</label>
+                        <input type="number" id="ex-length" min="1" max="120" value="10" required>
+                    </div>
                 </div>
                 <button type="submit" id="submit-btn">Add Exercise</button>
                 <button type="button" id="cancel-edit-btn" class="secondary" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
@@ -524,15 +559,26 @@
             lists: ["Home Gym", "Commercial Gym", "BUD/S Prep"],
             activeList: "Home Gym",
             exercises: [
-                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscle: "Full Body", diff: 8, length: 15 },
-                { id: "2", list: "Home Gym", name: "Heavy Sandbag Squats", muscle: "Lower Body", diff: 7, length: 12 },
-                { id: "3", list: "Commercial Gym", name: "Barbell Back Squat", muscle: "Lower Body", diff: 8, length: 15 },
-                { id: "4", list: "BUD/S Prep", name: "Ruck March / Conditioning", muscle: "Cardio / Conditioning", diff: 6, length: 45 },
-                { id: "5", list: "BUD/S Prep", name: "Core Flutter Kicks", muscle: "Core", diff: 5, length: 10 }
+                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscles: ["Full Body", "Cardio / Conditioning"], diff: 8, length: 15 },
+                { id: "2", list: "Home Gym", name: "Heavy Sandbag Squats", muscles: ["Lower Body"], diff: 7, length: 12 },
+                { id: "3", list: "Commercial Gym", name: "Barbell Back Squat", muscles: ["Lower Body"], diff: 8, length: 15 },
+                { id: "4", list: "BUD/S Prep", name: "Ruck March / Conditioning", muscles: ["Cardio / Conditioning", "Full Body"], diff: 6, length: 45 },
+                { id: "5", list: "BUD/S Prep", name: "Core Flutter Kicks", muscles: ["Core"], diff: 5, length: 10 }
             ]
         };
 
         let appData = JSON.parse(localStorage.getItem('workout_app_multilist_data')) || defaultData;
+
+        // Migration helper for old single-muscle data formats in localStorage
+        appData.exercises.forEach(ex => {
+            if (!ex.muscles && ex.muscle) {
+                ex.muscles = [ex.muscle];
+                delete ex.muscle;
+            } else if (!ex.muscles) {
+                ex.muscles = ["Full Body"];
+            }
+        });
+
         let activeGeneratorMode = 'full';
 
         function saveData() {
@@ -600,7 +646,15 @@
         function updateMuscleFilterDropdowns() {
             const fullSelect = document.getElementById('gen-muscle');
             const val1 = fullSelect.value;
-            const muscles = ["All", ...new Set(appData.exercises.filter(ex => ex.list === appData.activeList).map(e => e.muscle))];
+            
+            const currentExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
+            const allMusclesSet = new Set();
+            currentExercises.forEach(ex => {
+                const mArray = ex.muscles || ["Full Body"];
+                mArray.forEach(m => allMusclesSet.add(m));
+            });
+
+            const muscles = ["All", ...allMusclesSet];
             fullSelect.innerHTML = muscles.map(m => `<option value="${m}" ${m === val1 ? 'selected' : ''}>${m}</option>`).join('');
         }
 
@@ -649,18 +703,26 @@
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
             const name = document.getElementById('ex-name').value.trim();
-            const muscle = document.getElementById('ex-muscle').value;
             const diff = parseInt(document.getElementById('ex-diff').value);
             const length = parseInt(document.getElementById('ex-length').value);
 
+            // Gather checked checkboxes
+            const checkedBoxes = document.querySelectorAll('input[name="ex-muscle-cb"]:checked');
+            const muscles = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (muscles.length === 0) {
+                alert("Please select at least one muscle group.");
+                return;
+            }
+
             if (id) {
-                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscle, diff, length } : ex);
+                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscles, diff, length } : ex);
             } else {
                 const newEx = {
                     id: Date.now().toString(),
                     list: appData.activeList,
                     name,
-                    muscle,
+                    muscles,
                     diff,
                     length
                 };
@@ -676,29 +738,37 @@
             const listContainer = document.getElementById('exercise-list');
             
             const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
-            const filtered = currentListExercises.filter(ex => ex.name.toLowerCase().includes(query) || ex.muscle.toLowerCase().includes(query));
+            const filtered = currentListExercises.filter(ex => {
+                const nameMatch = ex.name.toLowerCase().includes(query);
+                const muscleMatch = (ex.muscles || []).some(m => m.toLowerCase().includes(query));
+                return nameMatch || muscleMatch;
+            });
 
             if (filtered.length === 0) {
                 listContainer.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:16px;">No exercises found in this list.</p>`;
                 return;
             }
 
-            listContainer.innerHTML = filtered.map(ex => `
-                <div class="exercise-item">
-                    <div class="exercise-info">
-                        <h3>${ex.name}</h3>
-                        <div class="exercise-meta">
-                            <span class="badge">${ex.muscle}</span>
-                            <span class="badge badge-diff">Diff: ${ex.diff}/10</span>
-                            <span>⏱️ ${ex.length}m</span>
+            listContainer.innerHTML = filtered.map(ex => {
+                const mArray = ex.muscles || ["Full Body"];
+                const badgesHtml = mArray.map(m => `<span class="badge">${m}</span>`).join('');
+                return `
+                    <div class="exercise-item">
+                        <div class="exercise-info">
+                            <h3>${ex.name}</h3>
+                            <div class="exercise-meta">
+                                ${badgesHtml}
+                                <span class="badge badge-diff">Diff: ${ex.diff}/10</span>
+                                <span>⏱️ ${ex.length}m</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="editExercise('${ex.id}')" style="padding:6px 10px; font-size:0.8rem; width:auto;">Edit</button>
+                            <button onclick="deleteExercise('${ex.id}')" class="danger" style="padding:6px 10px; font-size:0.8rem; width:auto;">Del</button>
                         </div>
                     </div>
-                    <div style="display:flex; gap:6px;">
-                        <button onclick="editExercise('${ex.id}')" style="padding:6px 10px; font-size:0.8rem; width:auto;">Edit</button>
-                        <button onclick="deleteExercise('${ex.id}')" class="danger" style="padding:6px 10px; font-size:0.8rem; width:auto;">Del</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function editExercise(id) {
@@ -707,10 +777,15 @@
 
             document.getElementById('edit-id').value = ex.id;
             document.getElementById('ex-name').value = ex.name;
-            document.getElementById('ex-muscle').value = ex.muscle;
             document.getElementById('ex-diff').value = ex.diff;
             document.getElementById('ex-length').value = ex.length;
             
+            // Check matching checkboxes
+            const mArray = ex.muscles || ["Full Body"];
+            document.querySelectorAll('input[name="ex-muscle-cb"]').forEach(cb => {
+                cb.checked = mArray.includes(cb.value);
+            });
+
             document.getElementById('submit-btn').innerText = "Update Exercise";
             document.getElementById('cancel-edit-btn').style.display = "block";
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -722,6 +797,7 @@
 
         function resetForm() {
             document.getElementById('exercise-form').reset();
+            document.querySelectorAll('input[name="ex-muscle-cb"]').forEach(cb => cb.checked = false);
             document.getElementById('edit-id').value = '';
             document.getElementById('submit-btn').innerText = "Add Exercise";
             document.getElementById('cancel-edit-btn').style.display = "none";
@@ -741,7 +817,10 @@
 
             let pool = appData.exercises.filter(ex => ex.list === appData.activeList && ex.diff <= maxDiff);
             if (targetMuscle !== "All") {
-                pool = pool.filter(ex => ex.muscle === targetMuscle);
+                pool = pool.filter(ex => {
+                    const mArray = ex.muscles || ["Full Body"];
+                    return mArray.includes(targetMuscle);
+                });
             }
 
             if (pool.length === 0) {
@@ -767,14 +846,17 @@
             document.getElementById('results-title').innerText = "Full Custom Routine";
             
             resultsContainer.style.display = 'block';
-            listContainer.innerHTML = selected.map((ex, index) => `
-                <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
-                    <strong>${index + 1}. ${ex.name}</strong>
-                    <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
-                        ${ex.muscle} • Difficulty: ${ex.diff}/10 • Est: ${ex.length} mins
+            listContainer.innerHTML = selected.map((ex, index) => {
+                const mArray = ex.muscles || ["Full Body"];
+                return `
+                    <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
+                        <strong>${index + 1}. ${ex.name}</strong>
+                        <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
+                            ${mArray.join(', ')} • Difficulty: ${ex.diff}/10 • Est: ${ex.length} mins
+                        </div>
                     </div>
-                </div>
-            `).join('') + `<div style="margin-top:12px; font-weight:600; text-align:right;">Total Est. Time: ${totalTime} mins</div>`;
+                `;
+            }).join('') + `<div style="margin-top:12px; font-weight:600; text-align:right;">Total Est. Time: ${totalTime} mins</div>`;
         }
 
         function generateBlockPortion() {
@@ -787,7 +869,10 @@
 
             let pool = appData.exercises.filter(ex => ex.list === appData.activeList);
             if (targetMuscle !== "All") {
-                pool = pool.filter(ex => ex.muscle === targetMuscle);
+                pool = pool.filter(ex => {
+                    const mArray = ex.muscles || ["Full Body"];
+                    return mArray.includes(targetMuscle);
+                });
             }
 
             if (pool.length === 0) {
@@ -810,14 +895,17 @@
                         Total Duration: <strong>${totalMins} Minutes</strong> (${count} exercises rotated for ${rounds} rounds).
                     </span>
                 </div>
-            ` + selected.map((ex, index) => `
-                <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
-                    <strong>Minute ${index + 1}: ${ex.name}</strong>
-                    <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
-                        ${ex.muscle} • Difficulty: ${ex.diff}/10
+            ` + selected.map((ex, index) => {
+                const mArray = ex.muscles || ["Full Body"];
+                return `
+                    <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
+                        <strong>Minute ${index + 1}: ${ex.name}</strong>
+                        <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
+                            ${mArray.join(', ')} • Difficulty: ${ex.diff}/10
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function rerollCurrentView() {
