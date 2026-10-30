@@ -39,11 +39,11 @@
             color: var(--text-main);
             padding: 16px;
             padding-top: calc(16px + env(safe-area-inset-top));
-            padding-bottom: calc(110px + env(safe-area-inset-bottom));
+            padding-bottom: calc(120px + env(safe-area-inset-bottom));
             max-width: 600px;
             margin: 0 auto;
-            overflow-x: hidden;
-            overscroll-behavior-y: none;
+            position: relative;
+            min-height: 100vh;
         }
 
         header {
@@ -267,21 +267,21 @@
             align-items: center;
         }
 
-        /* Bottom Navigation Bar */
+        /* Permanently Fixed Bottom Navigation Bar */
         .nav-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(28, 28, 30, 0.85);
+            background: rgba(28, 28, 30, 0.92);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             justify-content: space-between;
-            padding: 10px 16px;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
-            z-index: 1000;
+            padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            z-index: 9999;
             gap: 8px;
         }
 
@@ -392,7 +392,7 @@
                 <span id="modality-badge-classification" class="badge badge-type">Time-Based</span>
             </div>
 
-           <div class="form-group">
+            <div class="form-group">
                 <label for="block-muscle">Target Muscle Group</label>
                 <select id="block-muscle">
                     <option value="All">All Muscle Groups</option>
@@ -404,23 +404,27 @@
                 </select>
             </div>
 
-            <div class="row">
-                <div class="form-group">
-                    <label for="block-exercise-count">Number of Exercises</label>
-                    <input type="number" id="block-exercise-count" value="4" min="1" max="10" oninput="updateEmomMath()">
+            <!-- EMOM SPECIFIC INPUTS -->
+            <div id="emom-inputs-container">
+                <div class="row">
+                    <div class="form-group">
+                        <label for="block-exercise-count">Number of Exercises</label>
+                        <input type="number" id="block-exercise-count" value="4" min="1" max="10" oninput="updateEmomMath()">
+                    </div>
+                    <div class="form-group">
+                        <label for="block-rounds">Number of Rounds</label>
+                        <input type="number" id="block-rounds" value="15" min="1" max="30" oninput="updateEmomMath()">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="block-rounds">Number of Rounds</label>
-                    <input type="number" id="block-rounds" value="15" min="1" max="30" oninput="updateEmomMath()">
-                </div>
-            </div>
 
-            <div class="modality-info-box" style="background: rgba(10, 132, 255, 0.1); border-color: rgba(10, 132, 255, 0.3);">
-                <span style="color: var(--text-main); font-weight: 600;">Total EMOM Duration:</span>
-                <span id="emom-total-time-display" class="badge" style="font-size: 0.9rem;">60 Mins</span>
+                <div class="modality-info-box" style="background: rgba(10, 132, 255, 0.1); border-color: rgba(10, 132, 255, 0.3);">
+                    <span style="color: var(--text-main); font-weight: 600;">Total EMOM Duration:</span>
+                    <span id="emom-total-time-display" class="badge" style="font-size: 0.9rem;">60 Mins</span>
+                </div>
             </div>
 
             <button onclick="generateBlockPortion()">Generate Portion</button>
+        </div>
 
         <!-- RESULTS DISPLAY -->
         <div id="workout-results" style="display:none;" class="card">
@@ -541,6 +545,7 @@
             updateExerciseCount();
             updateMuscleFilterDropdowns();
             renderExercises();
+            updateEmomMath();
         }
 
         function updateListSelectors() {
@@ -593,17 +598,17 @@
         }
 
         function updateMuscleFilterDropdowns() {
-            const currentListExercises = appData.exercises.filter(ex => ex.list === appData.activeList);
-            const muscles = ["All", ...new Set(currentListExercises.map(e => e.muscle))];
-            
             const fullSelect = document.getElementById('gen-muscle');
-            const blockSelect = document.getElementById('block-muscle');
-
             const val1 = fullSelect.value;
-            const val2 = blockSelect.value;
-
+            const muscles = ["All", ...new Set(appData.exercises.filter(ex => ex.list === appData.activeList).map(e => e.muscle))];
             fullSelect.innerHTML = muscles.map(m => `<option value="${m}" ${m === val1 ? 'selected' : ''}>${m}</option>`).join('');
-            blockSelect.innerHTML = muscles.map(m => `<option value="${m}" ${m === val2 ? 'selected' : ''}>${m}</option>`).join('');
+        }
+
+        function updateEmomMath() {
+            const exercisesCount = parseInt(document.getElementById('block-exercise-count').value) || 0;
+            const roundsCount = parseInt(document.getElementById('block-rounds').value) || 0;
+            const totalMinutes = exercisesCount * roundsCount;
+            document.getElementById('emom-total-time-display').innerText = `${totalMinutes} Mins`;
         }
 
         function setGeneratorMode(mode) {
@@ -777,6 +782,8 @@
             const modInfo = WORKOUT_MODALITIES[modalityKey];
             const targetMuscle = document.getElementById('block-muscle').value;
             const count = parseInt(document.getElementById('block-exercise-count').value) || 2;
+            const rounds = parseInt(document.getElementById('block-rounds').value) || 1;
+            const totalMins = count * rounds;
 
             let pool = appData.exercises.filter(ex => ex.list === appData.activeList);
             if (targetMuscle !== "All") {
@@ -793,17 +800,19 @@
 
             const resultsContainer = document.getElementById('workout-results');
             const listContainer = document.getElementById('workout-list-container');
-            document.getElementById('results-title').innerText = `Generated ${modInfo.name} Block`;
+            document.getElementById('results-title').innerText = `Generated ${modInfo.name} Block (${totalMins} Mins)`;
 
             resultsContainer.style.display = 'block';
             listContainer.innerHTML = `
-                <div style="margin-bottom:12px; padding:8px 12px; background:rgba(255,255,255,0.05); border-radius:8px;">
-                    <span class="badge ${modInfo.type === 'TIME_BASED' ? 'badge-type' : ''}">${modInfo.type === 'TIME_BASED' ? 'Time-Based' : 'Rep-Based'}</span>
-                    <span style="font-size:0.85rem; color:var(--text-muted); display:block; margin-top:4px;">${modInfo.description}</span>
+                <div style="margin-bottom:12px; padding:10px 12px; background:rgba(255,255,255,0.05); border-radius:8px;">
+                    <span class="badge badge-type">Time-Based • ${rounds} Rounds</span>
+                    <span style="font-size:0.85rem; color:var(--text-muted); display:block; margin-top:4px;">
+                        Total Duration: <strong>${totalMins} Minutes</strong> (${count} exercises rotated for ${rounds} rounds).
+                    </span>
                 </div>
             ` + selected.map((ex, index) => `
                 <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
-                    <strong>${index + 1}. ${ex.name}</strong>
+                    <strong>Minute ${index + 1}: ${ex.name}</strong>
                     <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
                         ${ex.muscle} • Difficulty: ${ex.diff}/10
                     </div>
