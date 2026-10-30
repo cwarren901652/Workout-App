@@ -419,6 +419,15 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label for="training-goal-select">Training Focus / Sub-Max Cap</label>
+                <select id="training-goal-select">
+                    <option value="STRENGTH">Max Strength / Load (Close to Failure)</option>
+                    <option value="CAPACITY" selected>Capacity / Hypertrophy (Standard Pacing)</option>
+                    <option value="ENDURANCE">Endurance / Pacing (Sub-Max Pacing)</option>
+                </select>
+            </div>
+
             <div class="modality-info-box">
                 <span>Classification:</span>
                 <span id="modality-badge-classification" class="badge badge-type">Time-Based</span>
@@ -468,6 +477,34 @@
 
     <!-- VIEW 2: EXERCISE LIBRARY & LIST MANAGER -->
     <div id="view-library" class="view-section">
+        <!-- ATHLETE BENCHMARKS CARD -->
+        <div class="card">
+            <h2>Athlete Capacity Benchmarks</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                Enter your tested unbroken max reps for core patterns. The generator uses these to calibrate rep targets across all related exercises.
+            </p>
+            <div class="row">
+                <div class="form-group">
+                    <label style="font-size:0.7rem;">Push-Ups (Push)</label>
+                    <input type="number" id="bm-upper-push" value="60" onchange="saveBenchmarks()">
+                </div>
+                <div class="form-group">
+                    <label style="font-size:0.7rem;">Pull-Ups (Pull)</label>
+                    <input type="number" id="bm-upper-pull" value="15" onchange="saveBenchmarks()">
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label style="font-size:0.7rem;">Air Squats (Legs)</label>
+                    <input type="number" id="bm-lower" value="50" onchange="saveBenchmarks()">
+                </div>
+                <div class="form-group">
+                    <label style="font-size:0.7rem;">Sandbag Clean (Full)</label>
+                    <input type="number" id="bm-full-body" value="18" onchange="saveBenchmarks()">
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <h2>Manage Lists</h2>
             <div class="row" style="margin-bottom: 10px;">
@@ -506,9 +543,13 @@
                         <input type="number" id="ex-diff" min="1" max="10" value="5" required>
                     </div>
                     <div class="form-group">
-                        <label for="ex-length">Length Factor (Mins)</label>
-                        <input type="number" id="ex-length" min="1" max="120" value="10" required>
+                        <label for="ex-custom-max">Personal Max Reps (Optional)</label>
+                        <input type="number" id="ex-custom-max" placeholder="Auto">
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="ex-length">Length Factor (Mins)</label>
+                    <input type="number" id="ex-length" min="1" max="120" value="10" required>
                 </div>
                 <button type="submit" id="submit-btn">Add Exercise</button>
                 <button type="button" id="cancel-edit-btn" class="secondary" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
@@ -549,27 +590,42 @@
 
     <script>
         const WORKOUT_MODALITIES = {
-            EMOM: { name: "EMOM", type: "TIME_BASED", description: "Fixed time cap per minute. Variable rest based on work speed." },
-            AMRAP: { name: "AMRAP", type: "TIME_BASED", description: "Fixed total time cap. Maximum work volume within time window." },
-            STRAIGHT_SETS: { name: "Straight Sets", type: "REP_BASED", description: "Fixed sets and rep targets. Variable overall duration." },
-            PYRAMID: { name: "Pyramid", type: "REP_BASED", description: "Ascending/Descending rep scheme per set. Variable overall duration." }
+            EMOM: { name: "EMOM", type: "TIME_BASED", mFactor: 0.70 },
+            AMRAP: { name: "AMRAP", type: "TIME_BASED", mFactor: 0.80 },
+            STRAIGHT_SETS: { name: "Straight Sets", type: "REP_BASED", mFactor: 1.30 },
+            PYRAMID: { name: "Pyramid", type: "REP_BASED", mFactor: 1.10 }
+        };
+
+        const GOAL_CAPS = {
+            STRENGTH: 1.05,
+            CAPACITY: 0.85,
+            ENDURANCE: 0.70
         };
 
         const defaultData = {
             lists: ["Home Gym", "Commercial Gym", "BUD/S Prep"],
             activeList: "Home Gym",
+            benchmarks: {
+                upper_push: 60,
+                upper_pull: 15,
+                lower: 50,
+                full_body: 18
+            },
             exercises: [
-                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscles: ["Full Body", "Cardio / Conditioning"], diff: 8, length: 15 },
-                { id: "2", list: "Home Gym", name: "Heavy Sandbag Squats", muscles: ["Lower Body"], diff: 7, length: 12 },
-                { id: "3", list: "Commercial Gym", name: "Barbell Back Squat", muscles: ["Lower Body"], diff: 8, length: 15 },
-                { id: "4", list: "BUD/S Prep", name: "Ruck March / Conditioning", muscles: ["Cardio / Conditioning", "Full Body"], diff: 6, length: 45 },
-                { id: "5", list: "BUD/S Prep", name: "Core Flutter Kicks", muscles: ["Core"], diff: 5, length: 10 }
+                { id: "1", list: "Home Gym", name: "Sandbag Clean & Press", muscles: ["Full Body", "Cardio / Conditioning"], diff: 8, length: 15, customMax: 18 },
+                { id: "2", list: "Home Gym", name: "Standard Push-Ups", muscles: ["Upper Body", "Core"], diff: 3, length: 8, customMax: 60 },
+                { id: "3", list: "Home Gym", name: "Pull-Ups", muscles: ["Upper Body"], diff: 6, length: 8, customMax: 15 },
+                { id: "4", list: "Home Gym", name: "Air Squats", muscles: ["Lower Body"], diff: 2, length: 8, customMax: 50 }
             ]
         };
 
         let appData = JSON.parse(localStorage.getItem('workout_app_multilist_data')) || defaultData;
 
-        // Migration helper for old single-muscle data formats in localStorage
+        // Ensure legacy data migration
+        if (!appData.benchmarks) {
+            appData.benchmarks = { upper_push: 60, upper_pull: 15, lower: 50, full_body: 18 };
+        }
+
         appData.exercises.forEach(ex => {
             if (!ex.muscles && ex.muscle) {
                 ex.muscles = [ex.muscle];
@@ -590,8 +646,67 @@
             updateListSelectors();
             updateExerciseCount();
             updateMuscleFilterDropdowns();
+            loadBenchmarkInputs();
             renderExercises();
             updateEmomMath();
+        }
+
+        function loadBenchmarkInputs() {
+            document.getElementById('bm-upper-push').value = appData.benchmarks.upper_push || 60;
+            document.getElementById('bm-upper-pull').value = appData.benchmarks.upper_pull || 15;
+            document.getElementById('bm-lower').value = appData.benchmarks.lower || 50;
+            document.getElementById('bm-full-body').value = appData.benchmarks.full_body || 18;
+        }
+
+        function saveBenchmarks() {
+            appData.benchmarks = {
+                upper_push: parseInt(document.getElementById('bm-upper-push').value) || 60,
+                upper_pull: parseInt(document.getElementById('bm-upper-pull').value) || 15,
+                lower: parseInt(document.getElementById('bm-lower').value) || 50,
+                full_body: parseInt(document.getElementById('bm-full-body').value) || 18
+            };
+            saveData();
+        }
+
+        /* --- THE CORE REP RECOMMENDATION ENGINE --- */
+        function getTheoreticalBaseline(diff) {
+            return Math.round(60 * Math.exp(-0.35 * (diff - 1)));
+        }
+
+        function getExerciseBaseline(ex) {
+            if (ex.customMax && ex.customMax > 0) {
+                return ex.customMax;
+            }
+
+            const theoretical = getTheoreticalBaseline(ex.diff);
+            const muscles = ex.muscles || ["Full Body"];
+            let categoryRatio = 1.0;
+
+            if (muscles.includes("Upper Body")) {
+                if (ex.name.toLowerCase().includes("pull") || ex.name.toLowerCase().includes("chin")) {
+                    categoryRatio = appData.benchmarks.upper_pull / getTheoreticalBaseline(6);
+                } else {
+                    categoryRatio = appData.benchmarks.upper_push / getTheoreticalBaseline(3);
+                }
+            } else if (muscles.includes("Lower Body")) {
+                categoryRatio = appData.benchmarks.lower / getTheoreticalBaseline(2);
+            } else if (muscles.includes("Full Body") || muscles.includes("Cardio / Conditioning")) {
+                categoryRatio = appData.benchmarks.full_body / getTheoreticalBaseline(8);
+            }
+
+            return Math.max(1, Math.round(theoretical * categoryRatio));
+        }
+
+        function calculatePrescribedReps(ex, modalityKey, totalDurationMinutes, goalKey) {
+            const baseline = getExerciseBaseline(ex);
+            const mModality = WORKOUT_MODALITIES[modalityKey].mFactor;
+            const cGoal = GOAL_CAPS[goalKey] || 0.85;
+
+            // Continuous Duration Decay: (15 / T)^0.25 anchored at 15 minutes = 1.0
+            const dDecay = Math.pow(15 / Math.max(5, totalDurationMinutes), 0.25);
+
+            const prescribed = Math.round(baseline * mModality * dDecay * cGoal);
+            return Math.max(1, prescribed);
         }
 
         function updateListSelectors() {
@@ -704,9 +819,10 @@
             const id = document.getElementById('edit-id').value;
             const name = document.getElementById('ex-name').value.trim();
             const diff = parseInt(document.getElementById('ex-diff').value);
+            const customMaxVal = document.getElementById('ex-custom-max').value;
+            const customMax = customMaxVal !== '' ? parseInt(customMaxVal) : null;
             const length = parseInt(document.getElementById('ex-length').value);
 
-            // Gather checked checkboxes
             const checkedBoxes = document.querySelectorAll('input[name="ex-muscle-cb"]:checked');
             const muscles = Array.from(checkedBoxes).map(cb => cb.value);
 
@@ -716,7 +832,7 @@
             }
 
             if (id) {
-                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscles, diff, length } : ex);
+                appData.exercises = appData.exercises.map(ex => ex.id === id ? { ...ex, name, muscles, diff, customMax, length } : ex);
             } else {
                 const newEx = {
                     id: Date.now().toString(),
@@ -724,6 +840,7 @@
                     name,
                     muscles,
                     diff,
+                    customMax,
                     length
                 };
                 appData.exercises.push(newEx);
@@ -751,6 +868,7 @@
 
             listContainer.innerHTML = filtered.map(ex => {
                 const mArray = ex.muscles || ["Full Body"];
+                const calculatedBase = getExerciseBaseline(ex);
                 const badgesHtml = mArray.map(m => `<span class="badge">${m}</span>`).join('');
                 return `
                     <div class="exercise-item">
@@ -759,7 +877,7 @@
                             <div class="exercise-meta">
                                 ${badgesHtml}
                                 <span class="badge badge-diff">Diff: ${ex.diff}/10</span>
-                                <span>⏱️ ${ex.length}m</span>
+                                <span class="badge badge-type">Max: ${calculatedBase}</span>
                             </div>
                         </div>
                         <div style="display:flex; gap:6px;">
@@ -778,9 +896,9 @@
             document.getElementById('edit-id').value = ex.id;
             document.getElementById('ex-name').value = ex.name;
             document.getElementById('ex-diff').value = ex.diff;
+            document.getElementById('ex-custom-max').value = ex.customMax !== null && ex.customMax !== undefined ? ex.customMax : '';
             document.getElementById('ex-length').value = ex.length;
             
-            // Check matching checkboxes
             const mArray = ex.muscles || ["Full Body"];
             document.querySelectorAll('input[name="ex-muscle-cb"]').forEach(cb => {
                 cb.checked = mArray.includes(cb.value);
@@ -799,6 +917,7 @@
             document.getElementById('exercise-form').reset();
             document.querySelectorAll('input[name="ex-muscle-cb"]').forEach(cb => cb.checked = false);
             document.getElementById('edit-id').value = '';
+            document.getElementById('ex-custom-max').value = '';
             document.getElementById('submit-btn').innerText = "Add Exercise";
             document.getElementById('cancel-edit-btn').style.display = "none";
         }
@@ -817,10 +936,7 @@
 
             let pool = appData.exercises.filter(ex => ex.list === appData.activeList && ex.diff <= maxDiff);
             if (targetMuscle !== "All") {
-                pool = pool.filter(ex => {
-                    const mArray = ex.muscles || ["Full Body"];
-                    return mArray.includes(targetMuscle);
-                });
+                pool = pool.filter(ex => (ex.muscles || ["Full Body"]).includes(targetMuscle));
             }
 
             if (pool.length === 0) {
@@ -847,12 +963,15 @@
             
             resultsContainer.style.display = 'block';
             listContainer.innerHTML = selected.map((ex, index) => {
-                const mArray = ex.muscles || ["Full Body"];
+                const targetReps = calculatePrescribedReps(ex, 'STRAIGHT_SETS', totalTime, 'CAPACITY');
                 return `
                     <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
                         <strong>${index + 1}. ${ex.name}</strong>
-                        <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
-                            ${mArray.join(', ')} • Difficulty: ${ex.diff}/10 • Est: ${ex.length} mins
+                        <div style="font-size:0.85rem; color: var(--primary); font-weight:600; margin-top:2px;">
+                            Prescribed Work: 3-4 Sets × ${targetReps} Reps
+                        </div>
+                        <div style="font-size:0.75rem; color: var(--text-muted); margin-top:2px;">
+                            ${(ex.muscles || []).join(', ')} • Difficulty: ${ex.diff}/10
                         </div>
                     </div>
                 `;
@@ -861,6 +980,7 @@
 
         function generateBlockPortion() {
             const modalityKey = document.getElementById('modality-select').value;
+            const goalKey = document.getElementById('training-goal-select').value;
             const modInfo = WORKOUT_MODALITIES[modalityKey];
             const targetMuscle = document.getElementById('block-muscle').value;
             const count = parseInt(document.getElementById('block-exercise-count').value) || 2;
@@ -869,10 +989,7 @@
 
             let pool = appData.exercises.filter(ex => ex.list === appData.activeList);
             if (targetMuscle !== "All") {
-                pool = pool.filter(ex => {
-                    const mArray = ex.muscles || ["Full Body"];
-                    return mArray.includes(targetMuscle);
-                });
+                pool = pool.filter(ex => (ex.muscles || ["Full Body"]).includes(targetMuscle));
             }
 
             if (pool.length === 0) {
@@ -896,12 +1013,15 @@
                     </span>
                 </div>
             ` + selected.map((ex, index) => {
-                const mArray = ex.muscles || ["Full Body"];
+                const targetReps = calculatePrescribedReps(ex, modalityKey, totalMins, goalKey);
                 return `
                     <div style="padding:10px 0; border-bottom: 1px solid var(--border);">
-                        <strong>Minute ${index + 1}: ${ex.name}</strong>
-                        <div style="font-size:0.85rem; color: var(--text-muted); margin-top:2px;">
-                            ${mArray.join(', ')} • Difficulty: ${ex.diff}/10
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>Minute ${index + 1}: ${ex.name}</strong>
+                            <span class="badge" style="font-size:0.85rem; padding:4px 8px;">${targetReps} Reps</span>
+                        </div>
+                        <div style="font-size:0.8rem; color: var(--text-muted); margin-top:4px;">
+                            ${(ex.muscles || []).join(', ')} • Difficulty: ${ex.diff}/10
                         </div>
                     </div>
                 `;
@@ -937,9 +1057,9 @@
                     if (imported && Array.isArray(imported.lists) && Array.isArray(imported.exercises)) {
                         appData = imported;
                         saveData();
-                        alert("Successfully imported multi-list libraries!");
+                        alert("Successfully imported multi-list libraries and benchmarks!");
                     } else {
-                        alert("Invalid backup file format for multi-list structure.");
+                        alert("Invalid backup file format.");
                     }
                 } catch (err) {
                     alert("Error parsing JSON file.");
